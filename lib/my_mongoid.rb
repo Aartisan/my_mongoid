@@ -56,7 +56,7 @@ module MyMongoid::Document
     end
   end
 
-  alias :attributes= :process_attributes
+  alias_method :attributes=, :process_attributes
 
   #private
   #def process_attribute(name, value)
@@ -69,13 +69,14 @@ module MyMongoid::Document::ClassMethods
     true
   end
 
-  def field(field_name, options = {})
-    name = field_name.to_s
+  def field(name, options = {})
+    name = name.to_s
 
 
     @fields ||= {}
     raise MyMongoid::DuplicateFieldError if @fields.has_key?(name)
     @fields[name] = MyMongoid::Field.new(name, options)
+
 
     define_method(name) do
       self.attributes[name]
@@ -84,10 +85,19 @@ module MyMongoid::Document::ClassMethods
     define_method("#{name}=") do |value|
       self.attributes[name] = value
     end
+
+    if options[:as]
+      alias_name = options[:as]
+      alias_method alias_name, name
+      alias_method "#{alias_name}=", "#{name}="
+    end
   end
 
   def fields
     @fields
+  end
+
+  def alias_field(field_name, alias_name)
   end
 end
 
