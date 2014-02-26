@@ -50,18 +50,27 @@ module MyMongoid::Document
   end
 
   def process_attributes(attr=nil)
+    process_default_attr
+
     attr.each_pair do |key, value|
       raise MyMongoid::UnknownAttributeError unless respond_to?(key)
+
+      if type = self.class.fields[key.to_s].options[:type]
+        raises StandardError unless value.is_a?(type)
+      end
+
       send("#{key}=", value)
+    end
+
+  end
+
+  def process_default_attr
+    self.class.fields.each do |key, value|
+      send("#{key}=", value.options[:default]) if value.options[:default]
     end
   end
 
   alias_method :attributes=, :process_attributes
-
-  #private
-  #def process_attribute(name, value)
-    #send("#{name}", value)
-  #end
 end
 
 module MyMongoid::Document::ClassMethods
