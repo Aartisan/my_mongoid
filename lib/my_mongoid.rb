@@ -5,6 +5,9 @@ module MyMongoid
   class MyMongoid::DuplicateFieldError < RuntimeError
   end
 
+  class MyMongoid::UnknownAttributeError < RuntimeError
+  end
+
   def self.models
     @models ||= []
   end
@@ -26,8 +29,7 @@ module MyMongoid::Document
   attr_reader :attributes
   def initialize(attr)
     raise ArgumentError, "Argument is not Hash" unless attr.is_a?(Hash)
-    @attributes = attr
-    #process_attributes(attr)
+    process_attributes(attr)
   end
 
   def read_attribute(name)
@@ -49,16 +51,17 @@ module MyMongoid::Document
 
   def process_attributes(attr=nil)
     attr.each_pair do |key, value|
-      #process_attribute(key, value)
+      raise MyMongoid::UnknownAttributeError unless respond_to?(key)
       send("#{key}=", value)
     end
   end
 
-  private
-  def process_attribute(name, value)
-    #responds = respond_to?("#{name}=")
-    send("#{name}", value)
-  end
+  alias :attributes= :process_attributes
+
+  #private
+  #def process_attribute(name, value)
+    #send("#{name}", value)
+  #end
 end
 
 module MyMongoid::Document::ClassMethods
