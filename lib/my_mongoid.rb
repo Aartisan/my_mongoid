@@ -2,19 +2,25 @@ require "my_mongoid/version"
 
 module MyMongoid
 
+  class MyMongoid::DuplicateFieldError < RuntimeError
+  end
+
   def self.models
     @models ||= []
   end
 
-  def self.regiest_models(klass)
+  def self.register_model(klass)
     models.push klass unless models.include?(klass)
   end
 end
 
 module MyMongoid::Document
   def self.included(klass)
-    MyMongoid.regiest_models(klass)
-    klass.extend(ClassMethods)
+    klass.module_eval do
+      extend ClassMethods
+      klass.field :_id, :as => :id
+      MyMongoid.register_model(klass)
+    end
   end
 
   attr_reader :attributes
@@ -35,6 +41,7 @@ module MyMongoid::Document
   def attributes
     @attributes ||= {}
   end
+
 
   def new_record?
     true
@@ -58,5 +65,33 @@ module MyMongoid::Document::ClassMethods
   def is_mongoid_model?
     true
   end
+
+  def field(field_name, options = {})
+    name = field_name.to_s
+
+
+    @fields ||= {}
+    raise MyMongoid::DuplicateFieldError if @fields.has_key?(name)
+    @fields[name] = MyMongoid::Field.new(name, options)
+
+    define_method(name) do
+      self.attributes[name]
+    end
+
+    define_method("#{name}=") do |value|
+      self.attributes[name] = value
+    end
+  end
+
+  def fields
+    @fields
+  end
 end
 
+class MyMongoid::Field
+  attr_reader :name, :options
+  def initialize(name,options)
+    @name = name
+    @options = options
+  end
+end
