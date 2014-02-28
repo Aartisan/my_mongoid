@@ -4,11 +4,13 @@
 .bundle
 .config
 .yardoc
+*.swp
 Gemfile.lock
 InstalledFiles
 _yardoc
 coverage
 doc/
+my_mongoid_spec
 lib/bundler/man
 pkg
 rdoc
