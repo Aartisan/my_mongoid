@@ -27,9 +27,11 @@ module MyMongoid::Document
   end
 
   attr_reader :attributes
+
   def initialize(attr)
     raise ArgumentError, "Argument is not Hash" unless attr.is_a?(Hash)
     process_attributes(attr)
+    @new_record_status = true
   end
 
   def read_attribute(name)
@@ -46,22 +48,16 @@ module MyMongoid::Document
 
 
   def new_record?
-    true
+    @new_record_status
   end
 
-  def process_attributes(attr=nil)
+  def process_attributes(attrs)
     process_default_attr
 
-    attr.each_pair do |key, value|
+    attrs.each_pair do |key, value|
       raise MyMongoid::UnknownAttributeError unless respond_to?(key)
-
-      if type = self.class.fields[key.to_s].options[:type]
-        raises StandardError unless value.is_a?(type)
-      end
-
       send("#{key}=", value)
     end
-
   end
 
   def process_default_attr
@@ -81,9 +77,8 @@ module MyMongoid::Document::ClassMethods
   def field(name, options = {})
     name = name.to_s
 
-    @fields ||= {}
-    raise MyMongoid::DuplicateFieldError if @fields.has_key?(name)
-    @fields[name] = MyMongoid::Field.new(name, options)
+    raise MyMongoid::DuplicateFieldError if fields.has_key?(name)
+    fields[name] = MyMongoid::Field.new(name, options)
 
     self.module_eval do
       define_method(name) do
@@ -93,26 +88,27 @@ module MyMongoid::Document::ClassMethods
       define_method("#{name}=") do |value|
         self.attributes[name] = value
       end
-    end
 
-    if options[:as]
-      alias_name = options[:as]
-      self.module_eval do
-        alias_method alias_name, name
-        alias_method "#{alias_name}=", "#{name}="
+      if options[:as]
+        alias_name = options[:as]
+        self.module_eval do
+          alias_method alias_name, name
+          alias_method "#{alias_name}=", "#{name}="
+        end
       end
     end
   end
 
   def fields
-    @fields
+    @fields ||= {}
   end
 end
 
 class MyMongoid::Field
   attr_reader :name, :options
+
   def initialize(name,options)
-    @name = name
+    @name = name.to_s
     @options = options
   end
 end
