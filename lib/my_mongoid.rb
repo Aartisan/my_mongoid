@@ -56,6 +56,10 @@ module MyMongoid::Document
 
     attrs.each_pair do |key, value|
       raise MyMongoid::UnknownAttributeError unless respond_to?(key)
+
+      if type = self.class.fields[key].options[:type]
+        raise StandardError unless value.is_a? type
+      end
       send("#{key}=", value)
     end
   end
